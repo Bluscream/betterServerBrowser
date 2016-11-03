@@ -2,7 +2,7 @@ from ts3plugin import ts3plugin, PluginHost
 from pytsonui import setupUi
 from PythonQt.QtGui import QDialog, QListWidgetItem, QWidget, QComboBox, QPalette, QTableWidgetItem
 from PythonQt.QtCore import Qt
-import ts3, ts3defines, datetime, os, requests, json
+import ts3, ts3defines, datetime, os, requests, json, configparser
 
 class serverBrowser(ts3plugin):
     name = "Better Server Browser"
@@ -17,9 +17,29 @@ class serverBrowser(ts3plugin):
     menuItems = [(ts3defines.PluginMenuType.PLUGIN_MENU_TYPE_GLOBAL, 0, "Browse Servers", "scripts/serverBrowser/gfx/icon.png")]
     hotkeys = []
     debug = False
+    ini = os.path.join(ts3.getPluginPath(), "pyTSon", "scripts", "serverBrowser", "cfg", "serverBrowser.ini")
+    settings = {}
+    filters = {}
 
 
     def __init__(self):
+        config = configparser.ConfigParser()
+        if os.path.isfile(self.ini):
+            config.read(self.ini)
+            self.settings = config['GENERAL'].items()
+            self.filters = config['FILTERS'].items()
+            for key in self.filters:
+                ts3.printMessageToCurrentTab(str(key[0]).title()+": "+str(key[1]))
+        else:
+            config['GENERAL'] = { "Debug": "False", "API": "" }
+            config['FILTERS'] = {
+                "serverNameModifier": "0", "filterServerName": "", "countryBox": "",
+                "hideEmpty": "False", "hideFull": "False", "maxUsers": "False", "maxUsersMin": "0", "maxUsersMax": "0",
+                "maxSlots": "False", "maxSlotsMin": "0", "maxUsersMax": "0", "filterPassword": "all", "filterChannels": "all"
+            }
+            with open(self.ini, 'w') as configfile:
+                config.write(configfile)
+
         ts3.printMessageToCurrentTab('[{:%Y-%m-%d %H:%M:%S}]'.format(datetime.datetime.now())+" [color=orange]"+self.name+"[/color] Plugin for pyTSon by [url=https://github.com/Bluscream]Bluscream[/url] loaded.")
 
     def onMenuItemEvent(self, schid, atype, menuItemID, selectedItemID):
@@ -30,6 +50,7 @@ class serverBrowser(ts3plugin):
 
 class ServersDialog(QDialog):
     #[(objectName, store, [children])]
+    COUNTRIES = {}
     API_PREFIX = "https://"
     API_DOMAIN = "api.planetteamspeak.com"
     API_BASE = API_PREFIX+API_DOMAIN+"/"
@@ -39,9 +60,7 @@ class ServersDialog(QDialog):
                         ("serverNameModifier", True, []),
                         ("filterServerName", True, []),
                         ("locationGroup", False, [
-                            ("countryBox", True, []),
-                            ("regionBox", True, []),
-                            ("cityBox", True, [])
+                            ("countryBox", True, [])
                         ]),
                         ("usersGroup", False, [
                             ("hideEmpty", True, []),
@@ -83,12 +102,18 @@ class ServersDialog(QDialog):
         #ReportDialog.ReasonList.clear()
         self.serverNameModifier.addItems(self.NAME_MODIFIERS)
         #item.setFlags(item.flags() &~ Qt.ItemIsEditable)
+
+        self.COUNTRIES = self.requestAvailableCountries()
+        self.countryBox.addItems([x[1] for x in sorted(self.COUNTRIES, key=lambda x: x[1])])
+        #for item in countries:
+            #self.countryBox.addItem(str(item[1]))
+
         servers = self.requestServers(1)
 
         self.status.setText("Status: "+servers["status"].title())
         palette = QPalette()
         if servers["status"] == "success":
-            palette.setColor(QPalette.Foreground,Qt.green)
+            palette.setColor(QPalette.Foreground,Qt.darkGreen)
         else:
             palette.setColor(QPalette.Foreground,Qt.red)
         self.status.setPalette(palette)
@@ -105,13 +130,18 @@ class ServersDialog(QDialog):
             _list.setItem(rowPosition, 5, QTableWidgetItem(str(key['hidden'])))
             _list.setItem(rowPosition, 6, QTableWidgetItem(key['address']))
 
+    def requestAvailableCountries(self):
+        countries = requests.get(self.API_BASE+"servercountries")
+        _countries = countries.content.decode('utf-8')
+        return json.loads(_countries)["result"]["data"]
+
     def requestServers(self, page, filters = []):
 
         servers = requests.get(self.API_BASE+"serverlist/?page="+str(page)+"&limit=1000")
         self.status.setText("Response from \""+self.API_DOMAIN+"\": "+str(servers.status_code)+": "+servers.reason)
         palette = QPalette()
         if servers.status_code == 200:
-            palette.setColor(QPalette.Foreground,Qt.green)
+            palette.setColor(QPalette.Foreground,Qt.darkGreen)
         else:
             palette.setColor(QPalette.Foreground,Qt.red)
         self.status.setPalette(palette)
