@@ -39,7 +39,7 @@
        </column>
        <column>
         <property name="text">
-         <string>Password</string>
+         <string>Country</string>
         </property>
        </column>
        <column>
@@ -49,17 +49,17 @@
        </column>
        <column>
         <property name="text">
-         <string>Country</string>
+         <string>Password</string>
         </property>
        </column>
        <column>
         <property name="text">
-         <string>Region</string>
+         <string>Hidden</string>
         </property>
        </column>
        <column>
         <property name="text">
-         <string>City</string>
+         <string>IP</string>
         </property>
        </column>
       </widget>
