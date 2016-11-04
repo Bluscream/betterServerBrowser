@@ -47,10 +47,16 @@
      <item>
       <widget class="QTableWidget" name="serverList">
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>800</width>
+         <height>0</height>
+        </size>
        </property>
        <property name="autoScroll">
         <bool>true</bool>
@@ -198,6 +204,63 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="previous">
+         <property name="maximumSize">
+          <size>
+           <width>50</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>&lt;-</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="pageLabel">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>70</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="next">
+         <property name="maximumSize">
+          <size>
+           <width>50</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>-&gt;</string>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QLabel" name="status">
          <property name="text">
           <string/>
@@ -210,6 +273,9 @@
    </item>
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_8">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetDefaultConstraint</enum>
+     </property>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
@@ -316,7 +382,11 @@
            </widget>
           </item>
           <item>
-           <widget class="QComboBox" name="countryBox"/>
+           <widget class="QComboBox" name="countryBox">
+            <property name="maxVisibleItems">
+             <number>20</number>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>
@@ -353,7 +423,11 @@
            </widget>
           </item>
           <item>
-           <widget class="QSpinBox" name="maxUsersMin"/>
+           <widget class="QSpinBox" name="maxUsersMin">
+            <property name="maximum">
+             <number>999999999</number>
+            </property>
+           </widget>
           </item>
           <item>
            <widget class="QLabel" name="label_2">
@@ -363,7 +437,11 @@
            </widget>
           </item>
           <item>
-           <widget class="QSpinBox" name="maxUsersMax"/>
+           <widget class="QSpinBox" name="maxUsersMax">
+            <property name="maximum">
+             <number>999999999</number>
+            </property>
+           </widget>
           </item>
           <item>
            <widget class="QLabel" name="label_3">
@@ -391,7 +469,11 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="maxSlotsMin"/>
+         <widget class="QSpinBox" name="maxSlotsMin">
+          <property name="maximum">
+           <number>999999999</number>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QLabel" name="label_5">
@@ -401,7 +483,11 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="maxSlotsMax"/>
+         <widget class="QSpinBox" name="maxSlotsMax">
+          <property name="maximum">
+           <number>999999999</number>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QLabel" name="label_4">
@@ -495,9 +581,19 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_8">
        <item>
+        <widget class="QLabel" name="info">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item>
         <spacer name="horizontalSpacer">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::MinimumExpanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
