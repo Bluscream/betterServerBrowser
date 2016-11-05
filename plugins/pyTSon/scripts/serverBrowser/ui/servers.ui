@@ -18,7 +18,7 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>300</width>
+    <width>1200</width>
     <height>100</height>
    </size>
   </property>
@@ -83,7 +83,7 @@
         <bool>false</bool>
        </property>
        <property name="columnCount">
-        <number>6</number>
+        <number>5</number>
        </property>
        <attribute name="horizontalHeaderVisible">
         <bool>true</bool>
@@ -99,28 +99,16 @@
        </attribute>
        <column>
         <property name="text">
-         <string>Premium</string>
+         <string>Name</string>
         </property>
         <property name="toolTip">
-         <string>Premium</string>
+         <string>Server Name</string>
         </property>
         <property name="font">
          <font>
           <weight>50</weight>
           <bold>false</bold>
-          <kerning>true</kerning>
          </font>
-        </property>
-        <property name="textAlignment">
-         <set>AlignCenter</set>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>Name</string>
-        </property>
-        <property name="toolTip">
-         <string>Server Name</string>
         </property>
         <property name="textAlignment">
          <set>AlignCenter</set>
@@ -613,6 +601,12 @@
          </property>
          <property name="text">
           <string>Apply filters</string>
+         </property>
+         <property name="autoDefault">
+          <bool>true</bool>
+         </property>
+         <property name="default">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
