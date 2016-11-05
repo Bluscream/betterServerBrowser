@@ -116,8 +116,13 @@ class ServersDialog(QDialog):
         setupUi(self, os.path.join(ts3.getPluginPath(), "pyTSon", "scripts", "serverBrowser", "ui", "servers.ui"), self.CONF_WIDGETS)
         self.setupList()
         self.setWindowTitle("PlanetTeamspeak Server Browser")
-        #self.apply.connect("clicked()", self.on_apply_clicked)
-        #self.reload.connect("clicked()", self.on_reload_clicked)
+        #try:
+            #self.serverList.doubleClicked.connect(self.table_doubleclicked)
+            #self.serverList.connect("doubleClicked()", self.table_doubleclicked)
+            #self.apply.connect("clicked()", self.on_apply_clicked)
+            #self.reload.connect("clicked()", self.on_reload_clicked)
+        #except:
+            #ts3.logMessage(traceback.format_exc(), ts3defines.LogLevel.LogLevel_ERROR, "PyTSon", 0)
         #self.ReasonList.connect("currentItemChanged(QListWidgetItem*, QListWidgetItem*)", self.onReasonListCurrentItemChanged)
         #self.ReasonList.connect("itemChanged(QListWidgetItem*)", self.onReasonListItemChanged)
 
@@ -180,17 +185,12 @@ class ServersDialog(QDialog):
         except:
             ts3.logMessage(traceback.format_exc(), ts3defines.LogLevel.LogLevel_ERROR, "pyTSon", 0)
 
-    # def doubleClicked_table(self):
-    #     index = self.serverList.selectedIndexes()[0]
-    #     id_us = int(self.serverList.model().data(index).toString())
-    #     ts3.printMessageToCurrentTab("index : " + str(id_us))
-
     def contextMenuEvent(self, event):
-        self.serverList = QMenu(self)
-        connectAction = QAction("scripts/serverBrowser/gfx/icon.png", 'Connect', self)
+        self.serverList.menu = QMenu(self)
+        connectAction = QAction('Connect', self)
         connectAction.triggered.connect(self.connect)
-        self.serverList.addAction(connectAction)
-        self.serverList.popup(QCursor.pos())
+        self.serverList.menu.addAction(connectAction)
+        self.serverList.menu.popup(QCursor.pos())
 
     def connect(self):
         index = self.serverList.selectedIndexes()[0]
@@ -216,7 +216,7 @@ class ServersDialog(QDialog):
 
     def requestServers(self, filters = []):
 
-        servers = requests.get(self.API_BASE+"serverlist/?page="+str(self.page)+"&limit=30")
+        servers = requests.get(self.API_BASE+"serverlist/?page="+str(self.page)+"&limit=3")
         self.status.setText("Response from \""+self.API_DOMAIN+"\": "+str(servers.status_code)+": "+servers.reason)
         palette = QPalette()
         if not servers.status_code == 200:
@@ -319,9 +319,20 @@ class ServersDialog(QDialog):
                 self.listServers(self.page)
         except:
             ts3.logMessage(traceback.format_exc(), ts3defines.LogLevel.LogLevel_ERROR, "PyTSon", 0)
+
     def on_next_clicked(self):
         try:
             self.page += 1
             self.listServers(self.page)
         except:
             ts3.logMessage(traceback.format_exc(), ts3defines.LogLevel.LogLevel_ERROR, "PyTSon", 0)
+
+    def on_serverList_doubleClicked(self):
+        try:
+            ts3.logMessage("test", ts3defines.LogLevel.LogLevel_INFO, "pyTSon", 0)
+            index = self.serverList.selectedIndexes()[0]
+            ts3.logMessage("test2", ts3defines.LogLevel.LogLevel_INFO, "pyTSon", 0)
+            # id_us = int(self.serverList.model().data(index).toString())
+            # ts3.printMessageToCurrentTab("index : " + str(id_us))
+        except:
+            ts3.logMessage(traceback.format_exc(), ts3defines.LogLevel.LogLevel_ERROR, "pyTSon", 0)
