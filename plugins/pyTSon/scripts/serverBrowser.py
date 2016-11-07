@@ -1,8 +1,9 @@
 from ts3plugin import ts3plugin, PluginHost
 from pytsonui import setupUi, getValues, ValueType
-from PythonQt.QtGui import QDialog, QListWidgetItem, QWidget, QComboBox, QPalette, QTableWidgetItem, QMenu, QAction, QCursor
-from PythonQt.QtCore import Qt
-import ts3, ts3defines, datetime, os, requests, json, configparser, webbrowser, traceback, urllib.parse
+from PythonQt.QtGui import QDialog, QListWidgetItem, QWidget, QComboBox, QPalette, QTableWidgetItem, QMenu, QAction, QCursor, QApplication
+from PythonQt.QtCore import Qt, QTimer
+from datetime import datetime
+import ts3, ts3defines, os, requests, json, configparser, webbrowser, traceback, urllib.parse
 
 
 class serverBrowser(ts3plugin):
@@ -27,7 +28,7 @@ class serverBrowser(ts3plugin):
             #for key, value in self.config["FILTERS"].items():
                 #ts3.printMessageToCurrentTab(str(key).title()+": "+str(value))
         else:
-            self.config['GENERAL'] = { "debug": "False", "api": "https://api.planetteamspeak.com/", "morerequests": "False" }
+            self.config['GENERAL'] = { "debug": "False", "api": "https://api.planetteamspeak.com/", "morerequests": "False", "serversperpage": "100" }
             self.config['FILTERS'] = {
                 "serverNameModifier": "Contains", "filterServerName": "", "countryBox": "",
                 "hideEmpty": "False", "hideFull": "False", "maxUsers": "False", "maxUsersMin": "0", "maxUsersMax": "0",
@@ -35,19 +36,23 @@ class serverBrowser(ts3plugin):
             }
             with open(self.ini, 'w') as configfile:
                 self.config.write(configfile)
+        ts3.printMessageToCurrentTab(str(QApplication.instance()))
 
-        ts3.printMessageToCurrentTab('[{:%Y-%m-%d %H:%M:%S}]'.format(datetime.datetime.now())+" [color=orange]"+self.name+"[/color] Plugin for pyTSon by [url=https://github.com/Bluscream]Bluscream[/url] loaded.")
+        ts3.logMessage(self.name+" script for pyTSon by "+self.author+" loaded from \""+__file__+"\".", ts3defines.LogLevel.LogLevel_INFO, "Python Script", 0)
+        if self.config['GENERAL']['debug'] == "True":
+            ts3.printMessageToCurrentTab('[{:%Y-%m-%d %H:%M:%S}]'.format(datetime.now())+" [color=orange]"+self.name+"[/color] Plugin for pyTSon by [url=https://github.com/"+self.author+"]Bluscream[/url] loaded.")
 
     def configure(self, qParentWidget):
         d = dict()
         d['debug'] = (ValueType.boolean, "Debug", self.config['GENERAL']['debug'] == "True", None, None)
         d['morerequests'] = (ValueType.boolean, "Fast Connection", self.config['GENERAL']['morerequests'] == "True", None, None)
+        d['serversperpage'] = (ValueType.integer, "Servers per page:", int(self.config['GENERAL']['serversperpage']), 0, 250)
         d['api'] = (ValueType.string, "API Base URL:", self.config['GENERAL']['api'], None, 1)
         widgets = getValues(None, "Server Browser Settings", d, self.configDialogClosed)
 
     def configDialogClosed(self, r, vals):
         if r == QDialog.Accepted:
-            self.config['GENERAL'] = { "debug": vals['debug'], "api": vals['api'], "morerequests": vals['morerequests'] }
+            self.config['GENERAL'] = { "debug": str(vals['debug']), "api": vals['api'], "morerequests": str(vals['morerequests']), "serversperpage": str(vals['serversperpage']) }
             with open(self.ini, 'w') as configfile:
                 self.config.write(configfile)
 
@@ -73,8 +78,11 @@ class serverBrowser(ts3plugin):
 class ServersDialog(QDialog):
     page = 1
     pages = 0
+    cooldown = False
+    cooldown_page = False
+    cooldown_time = 5000
+    cooldown_time_page = 1000
     countries = []
-    SERVERS_PER_PAGE = 1000
     NAME_MODIFIERS = ["Contains", "Starts with", "Ends with"]
     CONF_WIDGETS = [
                         ("serverList", True, []),
@@ -125,7 +133,6 @@ class ServersDialog(QDialog):
         self.serverBrowser=serverBrowser
         super(QDialog, self).__init__(parent)
         setupUi(self, os.path.join(ts3.getPluginPath(), "pyTSon", "scripts", "serverBrowser", "ui", "servers.ui"), self.CONF_WIDGETS)
-        self.setupList()
         self.setWindowTitle("PlanetTeamspeak Server Browser")
         #ts3.printMessageToCurrentTab("Countries: "+str(self.countries))
         #try:
@@ -137,11 +144,10 @@ class ServersDialog(QDialog):
             #ts3.logMessage(traceback.format_exc(), ts3defines.LogLevel.LogLevel_ERROR, "PyTSon", 0)
         #self.ReasonList.connect("currentItemChanged(QListWidgetItem*, QListWidgetItem*)", self.onReasonListCurrentItemChanged)
         #self.ReasonList.connect("itemChanged(QListWidgetItem*)", self.onReasonListItemChanged)
-
-    def setupList(self):
         self.serverList.horizontalHeader().setStretchLastSection(True)
         self.serverList.setColumnWidth(0, 300)
         self.serverNameModifier.addItems(self.NAME_MODIFIERS)
+        self.pageLabel.mousePressEvent = self.on_pageLabel_clicked
         #self.cfg.set("general", "differentApi", "True" if state == Qt.Checked else "False")
         self.requestAvailableCountries()
         self.countryBox.addItems([x[1]+" ("+str(x[2])+")" for x in self.countries])
@@ -216,13 +222,18 @@ class ServersDialog(QDialog):
         ts3.printMessageToCurrentTab("index : " + str(id_us))
 
     def getCountryIDbyName(self, name):
-        if name.__contains__(" ("):
-            name = name.split(" (")[0]
-        return [c for c in self.countries if c[1]==name][0][0]
+        try:
+            if name.__contains__(" ("):
+                name = name.split(" (")[0]
+            return [c for c in self.countries if c[1]==name][0][0]
+        except:
+            return '--'
 
-    def getCountryNamebyID(self, idd):
-        if [c for c in self.countries if c[0]==idd]:
-            return ctries[0][1]
+    def getCountryNamebyID(self, cid):
+        try:
+            return [c for c in self.countries if c[0]==cid][0][1]
+        except:
+            return 'Unknown ('+cid+')'
 
     def requestAvailableCountries(self):
         countries = requests.get(self.serverBrowser.config['GENERAL']['api']+"servercountries")
@@ -256,29 +267,26 @@ class ServersDialog(QDialog):
         # f = { 'eventName' : 'myEvent', 'eventDescription' : "cool event"}
         # urllib.urlencode(f)
         _filters = self.serverBrowser.config["FILTERS"]
-        url = self.serverBrowser.config['GENERAL']['api']+"serverlist/?page="+str(self.page)
-        if self.buhl(self.serverBrowser.config['GENERAL']['morerequests']):
-            url += "&limit=50"
-        else:
-            url += "&limit=999"
+        url = self.serverBrowser.config['GENERAL']['api']+"serverlist/?page="+str(self.page)+"&limit="+str(self.serverBrowser.config['GENERAL']['serversperpage'])
         if _filters["filterPassword"] == "none":
             url += "&password=false"
         elif _filters["filterPassword"] == "only":
             url += "&password=true"
         if _filters["filterChannels"] == "none":
-            url += "&createcannels=false"
+            url += "&createchannels=false"
         elif _filters["filterChannels"] == "only":
-            url += "&createcannels=true"
+            url += "&createchannels=true"
         if self.buhl(_filters["maxUsers"]):
             url += "&minusers="+str(_filters["maxUsersMin"])+"&maxusers="+str(_filters["maxUsersMax"])
         if self.buhl(_filters["maxSlots"]):
             url += "&minslots="+str(_filters["maxSlotsMin"])+"&maxslots="+str(_filters["maxSlotsMax"])
         if _filters["filterServerName"] and _filters["filterServerName"] != "":
             url += "&search="+urllib.parse.quote_plus(_filters["filterServerName"])
-        ts3.printMessageToCurrentTab(_filters["countryBox"])
-        if _filters["countryBox"] != "All":
-            url+= "&country="+self.getCountryIDbyName(_filters["countryBox"])
-        ts3.printMessageToCurrentTab(url)
+        cid = self.getCountryIDbyName(_filters["countryBox"])
+        if _filters["countryBox"] != "All" and cid != '--':
+            url+= "&country="+cid
+        if self.serverBrowser.config["GENERAL"]["debug"] == "True":
+            ts3.printMessageToCurrentTab(url)
         return url
 
     def requestServers(self, url):
@@ -291,10 +299,15 @@ class ServersDialog(QDialog):
         _servers = servers.content.decode('utf-8')
         __servers = json.loads(_servers)
         return __servers
-    i = 0
+
     def listServers(self):
-        self.i = self.i+1
-        ts3.printMessageToCurrentTab(str(self.i))
+        ts3.printMessageToCurrentTab(str(self.cooldown))
+        if self.cooldown:
+            self.status.setText("You have to wait "+str(self.cooldown_time/1000)+" second(s) before retrying!")
+            palette = QPalette()
+            palette.setColor(QPalette.Foreground,Qt.red)
+            self.status.setPalette(palette)
+            return
         url = self.setupURL()
         servers = self.requestServers(url)
         self.status.setText("Status: "+servers["status"].title())
@@ -343,7 +356,8 @@ class ServersDialog(QDialog):
                     palette = QPalette()
                     palette.setColor(QPalette.Foreground,Qt.red)
                     _list.setPalette(palette)
-                _list.setItem(rowPosition, 2, QTableWidgetItem(str(key['country'])))
+                _list.setItem(rowPosition, 2, QTableWidgetItem(self.getCountryNamebyID(key['country'])))
+                #ts3.printMessageToCurrentTab(str(key['createchannels']))
                 if key['createchannels']:
                     _list.setItem(rowPosition, 3, QTableWidgetItem("Yes"))
                 else:
@@ -364,6 +378,15 @@ class ServersDialog(QDialog):
 
         #if self.pluginsList.currentItem() == item:
             #self.settingsButton.setEnabled(checked and name in self.host.active and self.host.active[name].offersConfigure)
+
+    def disable_cooldown(self):
+        self.cooldown = False
+        self.reload.setEnabled(True)
+
+    def disable_cooldown_page(self):
+        self.cooldown_page = False
+        self.previous.setEnabled(True)
+        self.next.setEnabled(True)
 
     def on_apply_clicked(self):
         try:
@@ -397,27 +420,56 @@ class ServersDialog(QDialog):
                 self.countryBox.addItems([x[1]+" ("+str(x[2])+")" for x in self.countries])
             self.page = 1
             self.listServers()
+            if not self.cooldown:
+                self.cooldown = True
+                QTimer.singleShot(self.cooldown_time, self.disable_cooldown)
         except:
             ts3.logMessage(traceback.format_exc(), ts3defines.LogLevel.LogLevel_ERROR, "pyTSon", 0)
 
     def on_reload_clicked(self):
         try:
             self.listServers()
+            if not self.cooldown:
+                self.cooldown = True
+                self.reload.setEnabled(False)
+                QTimer.singleShot(self.cooldown_time, self.disable_cooldown)
         except:
             ts3.logMessage(traceback.format_exc(), ts3defines.LogLevel.LogLevel_ERROR, "PyTSon", 0)
 
     def on_previous_clicked(self):
         try:
+            if self.cooldown_page:
+                self.status.setText("You have to wait "+str(self.cooldown_time_page/1000)+" second(s) before switching pages!")
+                palette = QPalette()
+                palette.setColor(QPalette.Foreground,Qt.red)
+                self.status.setPalette(palette)
+                return
             if self.page > 1:
                 self.page -= 1
                 self.listServers()
+            if not self.cooldown:
+                self.cooldown_page = True
+                self.previous.setEnabled(False)
+                self.next.setEnabled(False)
+                QTimer.singleShot(self.cooldown_time_page, self.disable_cooldown_page)
         except:
             ts3.logMessage(traceback.format_exc(), ts3defines.LogLevel.LogLevel_ERROR, "PyTSon", 0)
 
     def on_next_clicked(self):
         try:
+            if self.cooldown_page:
+                self.status.setText("You have to wait "+str(self.cooldown_time_page/1000)+" second(s) before switching pages!")
+                palette = QPalette()
+                palette.setColor(QPalette.Foreground,Qt.red)
+                self.status.setPalette(palette)
+                return
             self.page += 1
             self.listServers()
+            if not self.cooldown:
+                self.cooldown_page = True
+                self.previous.setEnabled(False)
+                self.next.setEnabled(False)
+                QTimer.singleShot(self.cooldown_time_page, self.disable_cooldown_page)
         except:
             ts3.logMessage(traceback.format_exc(), ts3defines.LogLevel.LogLevel_ERROR, "PyTSon", 0)
 
@@ -428,5 +480,11 @@ class ServersDialog(QDialog):
             ts3.logMessage("test2", ts3defines.LogLevel.LogLevel_INFO, "pyTSon", 0)
             # id_us = int(self.serverList.model().data(index).toString())
             # ts3.printMessageToCurrentTab("index : " + str(id_us))
+        except:
+            ts3.logMessage(traceback.format_exc(), ts3defines.LogLevel.LogLevel_ERROR, "pyTSon", 0)
+
+    def on_pageLabel_clicked(self, event):
+        try:
+            ts3.logMessage("test", ts3defines.LogLevel.LogLevel_INFO, "pyTSon", 0)
         except:
             ts3.logMessage(traceback.format_exc(), ts3defines.LogLevel.LogLevel_ERROR, "pyTSon", 0)
