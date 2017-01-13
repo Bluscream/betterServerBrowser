@@ -137,3 +137,4 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+plugins/pyTSon/scripts/serverBrowser/ui/servers_temp.ui
